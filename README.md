@@ -16,7 +16,7 @@ HTML
 CSS
 
 ## Ergonomisches Konzept (GUI)
-
+![Concept](/project%20js2/Puzzle%20Game%20Js%20Kurs.png)
 
 ## Terminliche Einschätzung der Arbeitsschritte
 TODO: Siehe Issue Tracker
