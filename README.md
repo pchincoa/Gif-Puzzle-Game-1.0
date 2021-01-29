@@ -1,5 +1,5 @@
 # puzzle
-Teamprojekt Woche 4 JavaScript Weiterbildung
+Teamprojekt Woche 4 JavaScript Weiterbildung cimdata
 
 ## Namen aller Beteiligten
 - Pedro Chincoa
@@ -19,4 +19,4 @@ CSS
 ![Concept](/project%20js2/Puzzle%20Game%20Js%20Kurs.png)
 
 ## Terminliche Einschätzung der Arbeitsschritte
-TODO: Siehe Issue Tracker
+Siehe Issue Tracker
