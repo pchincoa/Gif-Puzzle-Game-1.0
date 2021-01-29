@@ -2,8 +2,8 @@
 Teamprojekt Woche 4 JavaScript Weiterbildung
 
 ## Namen aller Beteiligten
-Pedro Chincoa
-Yung-Hsin Zöllner
+- Pedro Chincoa
+- Yung-Hsin Zöllner
 
 ## Kurzbeschreibung
 Erstellen eines Picture Puzzle Game (Schiebepuzzel)
