@@ -16,8 +16,8 @@ Es ist ein Spiel, bei dem der Spieler aus 8 fragmentierten Teilen eines Fotos du
 - JavaScript
 - P5.js Library
 
-## Ergonomisches Konzept (GUI)
-![Concept](/project%20js2/Puzzle%20Game%20Js%20Kurs.png)
+## Ergonomisches Konzept (GUI)Concept](/project%20js2/PuzzleGame.png)
+![
 
 ## Terminliche Einschätzung der Arbeitsschritte
 Siehe Issue Tracker
