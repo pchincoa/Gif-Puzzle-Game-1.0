@@ -14,8 +14,9 @@ let counter = 0;
 let button1, button2;
 const mischenZeit = 10;
 
-let co;// = el("#canvas");
-
+let timerInterval;
+let timerHtml;
+let co;
 let clicks = 0;
 let startTime = null;
 let puzzleCollection = []; 
@@ -66,27 +67,30 @@ let prototypePuzzle = {
       tmp = whitePiece.dy;
       whitePiece.dy = this.dy;
       this.dy = tmp;
-
-      //draw();
     }
   }
 };
 
 
-// Array-Bildern initialisieren und laden
+/**
+ * Initialize image array and preload image
+ */
 function preload() {
   //img = loadImage(url[Math.floor(random(url.length))]);
   img = loadImage('img/free-images-national-gallery-of-art-2.jpg');
+  //img = loadImage('https://media.giphy.com/media/xUA7bcoWYjQMZhvEAM/giphy.gif');
 };
 
 
 // Sekunden in "zweistellig" konvertieren
-
-function convertSeconds(s) {
-  let min = floor(s / 60);
-  let sec = s % 60;
-  return nf(min, 2) + ':' + nf(sec, 2);
-
+/**
+ * Format current timer
+ * @param {number} seconds
+ */
+function convertSeconds(seconds) {
+  let min = floor(seconds / 60);
+  let sec = seconds % 60;
+  return `${nf(min, 2)}:${nf(sec, 2)}`;
 };
 
 
@@ -96,35 +100,30 @@ function convertSeconds(s) {
 function setup() {
   let canvasSize = Math.min(window.innerHeight, window.innerWidth);
   co = createCanvas(canvasSize, canvasSize);
-  co.mousePressed(puzzleClicked);
-
+  
   // shuffle button
-  select("#btn").mouseClicked(shuffle);
+  select("#btn").mouseClicked(shufflePuzzle);
 
   // end of game, for debugging
   select("#eg").mouseClicked(endOfTheGame);
 
+  button1 = createButton('Reload the Puzzle');
+  button1.mousePressed(nachLaden);
+  
+  select("#start").mousePressed(nachLaden);
+
   // create puzzle peaces
   puzzleFactory();
 
-  /*button1 = createButton('Reload the Puzzle');
-  button1.mousePressed(nachLaden);*/
-
   // Settings timer
-  let timer = select('#timer');
-  timer.html(convertSeconds(counter));
-  setInterval(timeIt, 800)
-
-  function timeIt() {
-     counter++;
-     timer.html(convertSeconds(counter));
-  }
+  timerHtml = select('#timer');
+  timerHtml.html(convertSeconds(counter));
 
   // Confetti Piece Instance
   // nach dem Lösung des Puzzle Confetti zeigen
-  for (let i = 0; i < 800; i++) {
+  for (let i = 0; i < canvasSize / 2; i++) {
      confetti[i] = new Confetti();
-  }; // Ende Schleife
+  } // Ende Schleife
 }; //ENDE setup
 
 
@@ -132,24 +131,32 @@ function setup() {
 // Bg Farbe, Stellung der Bilder und Frame Funktionen,
 function draw() {
   img.setFrame(frameCount % img.numFrames());
+
+  minDimension = Math.min(img.width, img.height);
+  noStroke();
+  fill(255);
+  puzzleCollection.forEach(puzzlePiece => {
+    if(puzzlePiece.whitePiece) {
+
+      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY);
+    } else {
+      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY);
+      image(img,
+        puzzlePiece.dx*co.width/piecesX + border, puzzlePiece.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border,
+        puzzlePiece.sx*minDimension/piecesX, puzzlePiece.sy*minDimension/piecesY, minDimension/piecesX, minDimension/piecesY);  
+    }
+  });
+
   if(gameWon) {
     frameRate(30);
-    for (let i = 0; i < 500; i++) {
-      //confetti[i].show();
+    for (let i = 0; i < confetti.length; i++) {
+      confetti[i].show();
       confetti[i].update();
     }
   } else {
     frameRate(15);
   }
-  minDimension = Math.min(img.width, img.height);
-  //puzzleCollection.forEach(puzzlePiece => {
-    image(img,0,0);/*,
-      puzzlePiece.sx*minDimension/piecesX, puzzlePiece.sy*minDimension/piecesY, minDimension/piecesX, minDimension/piecesY,
-      puzzlePiece.dx*co.width/piecesX + border, puzzlePiece.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border);*/
- // });
-  background(197, 204, 193);
 }; //ENDE draw
-
 
 // Die Seite nachladen
 function nachLaden() {
@@ -160,12 +167,16 @@ function nachLaden() {
 
 function windowResized() {
   let canvasSize = Math.min(window.innerHeight, window.innerWidth);
+  confetti=[];
+  for (let i = 0; i < canvasSize / 2; i++) {
+     confetti[i] = new Confetti();
+  }
   resizeCanvas(canvasSize, canvasSize);
 }
 
-function puzzleClicked() {
-  let x = event.pageX - (co.offsetLeft + co.clientLeft);
-  let y = event.pageY - (co.offsetTop + co.clientTop);
+function mouseClicked(event) {
+  let x = event.pageX - (co.canvas.offsetLeft + co.canvas.clientLeft);
+  let y = event.pageY - (co.canvas.offsetTop + co.canvas.clientTop);
 
   // Collision detection between clicked offset and element
   puzzleCollection.forEach(function(puzzlePiece) {
@@ -181,7 +192,7 @@ function puzzleClicked() {
   });
 
   clicks++;
-  select("#clicks").innerHTML = `Moves: ${clicks}`;
+  select("#clicks").elt.innerHTML = `Moves: ${clicks}`;
 
   if(clicks === 1){
     startTime = new Date();
@@ -231,7 +242,7 @@ function puzzleFactory(){
 /**
  * Shuffles the puzzle pieces randomly
  */
-function shuffle(){
+function shufflePuzzle(){
   let pos = []; // create array
   for (let x = 0; x < piecesX; x++) {
     for (let y = 0; y < piecesY; y++) {
@@ -253,24 +264,11 @@ function shuffle(){
     
   })
 
-  //draw();
+  timerInterval = setInterval(() => {
+    counter++;
+    select("#timer").html(convertSeconds(counter));
+  }, 1000)
 };
-
-
-
-/*
-function drawUp (){
-  minDimension = Math.min(image.width, image.height)
-  puzzleCollection.forEach(function(puzzlePiece){
-    puzzlePiece.draw();
-  });
-};
-*/
-// el("#start").addEventListener("click", drawUp)
-
-// Upon the start of the new game 
-// el("clicks").innerHTML = " ";
-// el("time").innerHTML = " ";
 
 function playAudio(){ 
 
@@ -285,17 +283,9 @@ function endOfTheGame(){
   if (puzzleCollection.every((puzzlePiece) => puzzlePiece.dx === puzzlePiece.sx && puzzlePiece.dy === puzzlePiece.sy)) {
     gameWon = true;
     
-    select("#start").style.display = "block"; // start button will be appeared 
-    // Time count 
-
-    let endTime = new Date();
-
-    // TODO: double, see setup
-    select("#timer").innerHTML = `Seconds: ${Math.ceil((endTime - startTime) / 1000)}`;
+    let a = select("#start").elt.style.display = "block"; // start button will be appeared 
+    
+    clearInterval(timerInterval);
     playAudio();
-
-    // confetti
-    let confetti = new Confetti();
-    confetti.show();
   }
 };

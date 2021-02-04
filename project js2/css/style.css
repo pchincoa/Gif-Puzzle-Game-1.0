@@ -81,7 +81,7 @@ button {
     font-variant: small-caps;
     font-stretch: narrower;
     text-shadow: gray 1px 1px 4px;
-    display:block;
+    display:none;
 
 }
 

@@ -17,22 +17,23 @@ class Confetti {
       this.show = function () {
          noStroke();
          fill(this.r, this.g, this.b);
-         rect(this.x, this.y, 7.5, 7.5);
+         rect(this.x, this.y, random(7, 10), random(3, 10));
 
       };
 
       // die Konfettischleife aktualisieren
 
       this.update = function () {
-         this.speed = random(2, 40);
+         this.speed = random(0.5, 1.5);
          this.y = this.y + this.speed;
+         this.x = this.x + random(-1,1);
 
          // Kontrollstruktur der Update-Funktion
          if (this.y > height) {
             this.y = random(0, -height);
-         };
+         }
       };
 
-   };
+   }
 
-};
+}
