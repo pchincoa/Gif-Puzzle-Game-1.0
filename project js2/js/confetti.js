@@ -24,7 +24,7 @@ class Confetti {
       // die Konfettischleife aktualisieren
 
       this.update = function () {
-         this.speed = random(0.5, 1.5);
+         this.speed = random(2, 40);
          this.y = this.y + this.speed;
          this.x = this.x + random(-1,1);
 
