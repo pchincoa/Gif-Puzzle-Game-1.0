@@ -15,7 +15,6 @@
   let piecesX = 3;
   let piecesY = 3;
 
-
   let prototypePuzzle = {
     dx : 0,   // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
     dy : 0,   // y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
@@ -71,7 +70,7 @@
 
         tmp = whitePiece.dy;
         whitePiece.dy = this.dy;
-        this.dy = whitePiece.dy;
+        this.dy = tmp;
 
         drawUp();
       }
@@ -95,6 +94,14 @@
         }
     });
 
+    clicks++;
+    el("#clicks").innerHTML = `Moves: ${clicks}`;
+
+    if(clicks === 1){
+
+      startTime = new Date();
+    };
+
   }, false);
 
   window.addEventListener('resize', resizeCanvas, false);
@@ -107,7 +114,12 @@
     drawUp(); 
   };
 
-  
+  /**
+   * Retrieve puzzle piece at given coordinate in puzzle.
+   * @param {number} dx x-coordinate in puzzle, 0-based
+   * @param {number} dy y-coordinate in puzzle, 0-based
+   * @return {Object} prototypePuzzle instance of puzzle piece, if found with given coordinates, null otherwise
+   */
   function getPuzzlePiece(dx, dy) {
     for(let i=0; i<puzzleCollection.length; i++){
       if (dx == puzzleCollection[i].dx && dy == puzzleCollection[i].dy) {
@@ -143,7 +155,9 @@
     }
   };
 
-
+  /**
+   * Shuffles the puzzle pieces randomly
+   */
   function shuffle(){
     let pos = []; // create array
     for (let x = 0; x < piecesX; x++) {
@@ -163,7 +177,6 @@
       } else {
         puzzlePiece.whitePiece = false;
       }
-      
       
     })
 
@@ -201,30 +214,44 @@
     });
   };
 
-  function puzzleGame(){
+  // el("#start").addEventListener("click", drawUp)
 
-    clicks++;
+  // Upon the start of the new game 
+  // el("clicks").innerHTML = " ";
+  // el("time").innerHTML = " ";
 
-    if(clicks === 1){
+  function playAudio(){ 
 
-      startTime = new Date();
-    }
-
-
-   
-
-
-
+    let sound = new Audio();
+    sound.src = "sound\mp3\winner.mp3";
+    sound.volume = 0.1;
+    sound.play();
 
   };
-
-  el("#clicks").innerHTML = `Clicks:${clicks}`;
 
   function endOfTheGame(){
+    if (puzzleCollection.every((puzzlePiece) => puzzlePiece.dx === puzzlePiece.sx && puzzlePiece.dy === puzzlePiece.sy)) {
+      
+      
+      el("#start").style.display = "block"; // start button will be appeared 
+      // Time count 
 
-   
+     
 
+      let endTime = new Date();
+
+      el("#time").innerHTML = `Seconds: ${Math.ceil((endTime - startTime) / 1000)}`;
+      playAudio();
+
+
+    };
+        // image.src = "img/free-images-national-gallery-of-art-2.jpg"
   };
+  
+
+  el("#eg").addEventListener("click", endOfTheGame);
+
+  function newGame(){}
 
 
 
@@ -233,4 +260,4 @@
 
 
 
-}());
+}()); 
