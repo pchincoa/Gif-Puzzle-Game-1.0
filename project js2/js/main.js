@@ -1,66 +1,60 @@
-(function(){
+let url = [
+  "https://media.giphy.com/media/3ohhwDfcBvBPpD9RZu/source.gif", // Vermeer
+  "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif", // Frida Kahlo
+  "https://media.giphy.com/media/xTiTnyVHRS87mtGPQs/source.gif", // Magritte
+  "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif", // Picasso
+  "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif" // Leonardo
+];
 
+let img;
+let confetti = [];
+let sound;
+let puzz;
+let counter = 0;
+let button1, button2;
+const mischenZeit = 10;
 
-function el(cssSelector){
-  return document.querySelector(cssSelector)
-};
-
-let co = el("#canvas");
-let ctx = co.getContext("2d");
+let co;// = el("#canvas");
 
 let clicks = 0;
 let startTime = null;
-let puzzleCollection = []
-let minDimension = 0;    // smaller of both dimensions of the source image
+let puzzleCollection = []; 
+let minDimension = 0;       // smaller of both dimensions of the source image
 let border = 2;
-let piecesX = 3;
-let piecesY = 3;
+let piecesX = 3;            // number of puzzle pieces in a row, should be >=3
+let piecesY = 3;            // number of puzzle pieces in a column, should be >=3
+let gameWon = false;
 
 let prototypePuzzle = {
-  dx : 0,   // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
-  dy : 0,   // y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
-  sx : 0,   // x position in source image (0 = most left, piecesX-1 = most right piece)
-  sy : 0,   // ...
+  dx : 0,                   // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
+  dy : 0,                   // y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
+  sx : 0,                   // x position in source image (0 = most left, piecesX-1 = most right piece)
+  sy : 0,                   // y position in source image (0 = top, piecesY-1 = bottom piece)
   whitePiece: false,
   spX: 0.1,
   spY: 0.1,
   so: null,
-  init: function(){
-    puzzleCollection.push(this);
-  },
-  draw: function(){
-    if(this.whitePiece){
-      ctx.fillStyle = "white";
-      ctx.fillRect(this.dx*co.width/piecesX + border, this.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border);
-    } else {
-      ctx.drawImage(image,
-        this.sx*minDimension/piecesX, this.sy*minDimension/piecesY, minDimension/piecesX, minDimension/piecesY,
-        this.dx*co.width/piecesX + border, this.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border);
-      }
-    },
-
-    checkNeighborsForWhitePiece: function (){  // Positioning the four neighbors of the empty piece 
-
-    if(this.dx > 0 && getPuzzlePiece(this.dx-1, this.dy).whitePiece){
+  init: function(){ puzzleCollection.push(this); },
+  checkNeighborsForWhitePiece: function(){  // Positioning the four neighbors of the empty piece 
+    if(this.dx > 0 && getPuzzlePiece(this.dx-1, this.dy).whitePiece) {
       return [this.dx-1, this.dy];
     } // left
 
-    if(this.dy > 0 && getPuzzlePiece(this.dx, this.dy-1).whitePiece){
+    if(this.dy > 0 && getPuzzlePiece(this.dx, this.dy-1).whitePiece) {
       return [this.dx, this.dy-1];
     } // up
 
-    if(this.dx < piecesX-1 && getPuzzlePiece(this.dx+1, this.dy).whitePiece){
+    if(this.dx < piecesX-1 && getPuzzlePiece(this.dx+1, this.dy).whitePiece) {
       return [this.dx+1, this.dy];
     } // right
 
-    if(this.dy < piecesY-1 && getPuzzlePiece(this.dx, this.dy+1).whitePiece){
+    if(this.dy < piecesY-1 && getPuzzlePiece(this.dx, this.dy+1).whitePiece) {
       return [this.dx, this.dy+1];
     }  // down
 
-    return false;
+    return false; // not found
   },
-
-  move: function(){
+  move: function() {
     let neighbor = this.checkNeighborsForWhitePiece();
     if(neighbor)
     {
@@ -73,16 +67,107 @@ let prototypePuzzle = {
       whitePiece.dy = this.dy;
       this.dy = tmp;
 
-      drawUp();
+      //draw();
     }
   }
 };
 
-co.addEventListener('click', function(event) {
+
+// Array-Bildern initialisieren und laden
+function preload() {
+  //img = loadImage(url[Math.floor(random(url.length))]);
+  img = loadImage('img/free-images-national-gallery-of-art-2.jpg');
+};
+
+
+// Sekunden in "zweistellig" konvertieren
+
+function convertSeconds(s) {
+  let min = floor(s / 60);
+  let sec = s % 60;
+  return nf(min, 2) + ':' + nf(sec, 2);
+
+};
+
+
+/**
+ * p5 library setup
+ */
+function setup() {
+  let canvasSize = Math.min(window.innerHeight, window.innerWidth);
+  co = createCanvas(canvasSize, canvasSize);
+  co.mousePressed(puzzleClicked);
+
+  // shuffle button
+  select("#btn").mouseClicked(shuffle);
+
+  // end of game, for debugging
+  select("#eg").mouseClicked(endOfTheGame);
+
+  // create puzzle peaces
+  puzzleFactory();
+
+  /*button1 = createButton('Reload the Puzzle');
+  button1.mousePressed(nachLaden);*/
+
+  // Settings timer
+  let timer = select('#timer');
+  timer.html(convertSeconds(counter));
+  setInterval(timeIt, 800)
+
+  function timeIt() {
+     counter++;
+     timer.html(convertSeconds(counter));
+  }
+
+  // Confetti Piece Instance
+  // nach dem Lösung des Puzzle Confetti zeigen
+  for (let i = 0; i < 800; i++) {
+     confetti[i] = new Confetti();
+  }; // Ende Schleife
+}; //ENDE setup
+
+
+// Puzzlebildern werden in Canvas geladen
+// Bg Farbe, Stellung der Bilder und Frame Funktionen,
+function draw() {
+  img.setFrame(frameCount % img.numFrames());
+  if(gameWon) {
+    frameRate(30);
+    for (let i = 0; i < 500; i++) {
+      //confetti[i].show();
+      confetti[i].update();
+    }
+  } else {
+    frameRate(15);
+  }
+  minDimension = Math.min(img.width, img.height);
+  //puzzleCollection.forEach(puzzlePiece => {
+    image(img,0,0);/*,
+      puzzlePiece.sx*minDimension/piecesX, puzzlePiece.sy*minDimension/piecesY, minDimension/piecesX, minDimension/piecesY,
+      puzzlePiece.dx*co.width/piecesX + border, puzzlePiece.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border);*/
+ // });
+  background(197, 204, 193);
+}; //ENDE draw
+
+
+// Die Seite nachladen
+function nachLaden() {
+  button1 = window.location.reload();
+
+};
+
+
+function windowResized() {
+  let canvasSize = Math.min(window.innerHeight, window.innerWidth);
+  resizeCanvas(canvasSize, canvasSize);
+}
+
+function puzzleClicked() {
   let x = event.pageX - (co.offsetLeft + co.clientLeft);
   let y = event.pageY - (co.offsetTop + co.clientTop);
 
-  // Collision detection between clicked offset and element.
+  // Collision detection between clicked offset and element
   puzzleCollection.forEach(function(puzzlePiece) {
     let puzzlePieceLeft = puzzlePiece.dx*co.width/piecesX + border;
     let puzzlePieceWidth = co.width/piecesX - 2*border;
@@ -96,23 +181,11 @@ co.addEventListener('click', function(event) {
   });
 
   clicks++;
-  el("#clicks").innerHTML = `Moves: ${clicks}`;
+  select("#clicks").innerHTML = `Moves: ${clicks}`;
 
   if(clicks === 1){
-
     startTime = new Date();
-  };
-
-}, false);
-
-window.addEventListener('resize', resizeCanvas, false);
-
-function resizeCanvas() {
-  let canvasSize = Math.min(window.innerHeight, window.innerWidth) - window.getComputedStyle(co).borderLeftWidth.replace("px","")*2;
-  co.width = canvasSize;
-  co.height = canvasSize;
-
-  drawUp(); 
+  }
 };
 
 /**
@@ -129,7 +202,6 @@ function getPuzzlePiece(dx, dy) {
   }
   return null;
 };
-
 
 
 function puzzleFactory(){
@@ -181,40 +253,19 @@ function shuffle(){
     
   })
 
-  drawUp();
+  //draw();
 };
 
-el("#btn").addEventListener("click", shuffle)
-
-let url = [
-  "https://media.giphy.com/media/3ohhwDfcBvBPpD9RZu/source.gif", // Vermeer
-  "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif", // Frida Kahlo
-  "https://media.giphy.com/media/xTiTnyVHRS87mtGPQs/source.gif", // Magritte
-  "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif", // Picasso
-  "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif" // Leonardo
-];
 
 
-let image = new Image();
-image.src = "img/free-images-national-gallery-of-art-2.jpg";
-//image.src = url[Math.floor(Math.random()*(url.length))];
-image.onload = drawUp;
-// console.log(url)
-
-
+/*
 function drawUp (){
-  // let pattern = ctx.createPattern(image, "repeat");
-  // ctx.fillStyle = pattern;
-  // ctx.fillRect(0,0, 480, 480);
-
   minDimension = Math.min(image.width, image.height)
-  // console.log("minDimension:"+minDimension);
-
   puzzleCollection.forEach(function(puzzlePiece){
     puzzlePiece.draw();
   });
 };
-
+*/
 // el("#start").addEventListener("click", drawUp)
 
 // Upon the start of the new game 
@@ -232,35 +283,19 @@ function playAudio(){
 
 function endOfTheGame(){
   if (puzzleCollection.every((puzzlePiece) => puzzlePiece.dx === puzzlePiece.sx && puzzlePiece.dy === puzzlePiece.sy)) {
+    gameWon = true;
     
-    
-    el("#start").style.display = "block"; // start button will be appeared 
+    select("#start").style.display = "block"; // start button will be appeared 
     // Time count 
-
-    
 
     let endTime = new Date();
 
-    el("#time").innerHTML = `Seconds: ${Math.ceil((endTime - startTime) / 1000)}`;
+    // TODO: double, see setup
+    select("#timer").innerHTML = `Seconds: ${Math.ceil((endTime - startTime) / 1000)}`;
     playAudio();
 
     // confetti
     let confetti = new Confetti();
-
-  };
-      // image.src = "img/free-images-national-gallery-of-art-2.jpg"
+    confetti.show();
+  }
 };
-
-
-el("#eg").addEventListener("click", endOfTheGame);
-
-function newGame(){}
-
-
-
-puzzleFactory();
-resizeCanvas();
-
-
-
-}()); 
