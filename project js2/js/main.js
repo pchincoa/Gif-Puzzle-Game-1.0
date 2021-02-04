@@ -1,3 +1,7 @@
+/**
+ * GIF pictures source 
+ */
+
 let url = [
   "https://media.giphy.com/media/3ohhwDfcBvBPpD9RZu/source.gif", // Vermeer
   "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif", // Frida Kahlo
@@ -17,7 +21,7 @@ const mischenZeit = 10;
 let timerInterval;
 let timerHtml;
 let co;
-let clicks = 0;
+let clicks = -1;
 let startTime = null;
 let puzzleCollection = []; 
 let minDimension = 0;       // smaller of both dimensions of the source image
@@ -26,15 +30,18 @@ let piecesX = 3;            // number of puzzle pieces in a row, should be >=3
 let piecesY = 3;            // number of puzzle pieces in a column, should be >=3
 let gameWon = false;
 
+/**
+ * The features of the prototype puzzle pieces 
+ */
 let prototypePuzzle = {
   dx : 0,                   // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
   dy : 0,                   // y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
   sx : 0,                   // x position in source image (0 = most left, piecesX-1 = most right piece)
   sy : 0,                   // y position in source image (0 = top, piecesY-1 = bottom piece)
-  whitePiece: false,
+  whitePiece: false,        // The empty piece
   spX: 0.1,
   spY: 0.1,
-  so: null,
+  music: null,
   init: function(){ puzzleCollection.push(this); },
   checkNeighborsForWhitePiece: function(){  // Positioning the four neighbors of the empty piece 
     if(this.dx > 0 && getPuzzlePiece(this.dx-1, this.dy).whitePiece) {
@@ -55,9 +62,13 @@ let prototypePuzzle = {
 
     return false; // not found
   },
+
+  /**
+   * The action/move upon clicking the puzzle piece next to the empty piece 
+   */
   move: function() {
     let neighbor = this.checkNeighborsForWhitePiece();
-    if(neighbor)
+    if(neighbor) /**Boolean(Array) => true */
     {
       let whitePiece = getPuzzlePiece(neighbor[0], neighbor[1]);
       let tmp = whitePiece.dx;
@@ -76,9 +87,9 @@ let prototypePuzzle = {
  * Initialize image array and preload image
  */
 function preload() {
-  //img = loadImage(url[Math.floor(random(url.length))]);
-  img = loadImage('img/free-images-national-gallery-of-art-2.jpg');
-  //img = loadImage('https://media.giphy.com/media/xUA7bcoWYjQMZhvEAM/giphy.gif');
+  img = loadImage(url[Math.floor(random(url.length))]);
+  // img = loadImage('img/free-images-national-gallery-of-art-2.jpg');
+  // img = loadImage('https://media.giphy.com/media/xUA7bcoWYjQMZhvEAM/giphy.gif');
 };
 
 
@@ -98,7 +109,7 @@ function convertSeconds(seconds) {
  * p5 library setup
  */
 function setup() {
-  let canvasSize = Math.min(window.innerHeight, window.innerWidth);
+  let canvasSize = Math.min(window.innerHeight/1.2, window.innerWidth/1.2);
   co = createCanvas(canvasSize, canvasSize);
   
   // shuffle button
@@ -107,15 +118,18 @@ function setup() {
   // end of game, for debugging
   select("#eg").mouseClicked(endOfTheGame);
 
+  // Background Music
+  select("#backGroundMusic").mouseClicked(alwaysOnMusic);
+
   button1 = createButton('Reload the Puzzle');
   button1.mousePressed(nachLaden);
   
   select("#start").mousePressed(nachLaden);
 
-  // create puzzle peaces
+  // create puzzle pieces
   puzzleFactory();
 
-  // Settings timer
+  // Settings of timer
   timerHtml = select('#timer');
   timerHtml.html(convertSeconds(counter));
 
@@ -130,23 +144,31 @@ function setup() {
 // Puzzlebildern werden in Canvas geladen
 // Bg Farbe, Stellung der Bilder und Frame Funktionen,
 function draw() {
-  img.setFrame(frameCount % img.numFrames());
+  img.setFrame(frameCount % img.numFrames()); /**frame count per second of the GIF image*/
 
-  minDimension = Math.min(img.width, img.height);
+  minDimension = Math.min(img.width, img.height); // Ensuring the result of a square image
   noStroke();
-  fill(255);
+  fill(255); 
   puzzleCollection.forEach(puzzlePiece => {
     if(puzzlePiece.whitePiece) {
 
-      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY);
+      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY); /** Paint the empty piece in white(255) */ 
     } else {
       rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY);
-      image(img,
-        puzzlePiece.dx*co.width/piecesX + border, puzzlePiece.dy*co.height/piecesY + border, co.width/piecesX - 2*border, co.height/piecesY - 2*border,
-        puzzlePiece.sx*minDimension/piecesX, puzzlePiece.sy*minDimension/piecesY, minDimension/piecesX, minDimension/piecesY);  
+      image(img, 
+        puzzlePiece.dx*co.width/piecesX + border,   // dx (x in destination =canvas)
+        puzzlePiece.dy*co.height/piecesY + border,  // dy (y in destination =canvas)
+        co.width/piecesX - 2*border,                // destination (=canvas) width
+        co.height/piecesY - 2*border,
+        puzzlePiece.sx*minDimension/piecesX,        // sx (x in source image)
+        puzzlePiece.sy*minDimension/piecesY,        // sy (y in source image)
+        minDimension/piecesX,
+        minDimension/piecesY);  
     }
   });
-
+  /**
+   * Upon winning, the rate will be increased along with the confetti shower 
+   */
   if(gameWon) {
     frameRate(30);
     for (let i = 0; i < confetti.length; i++) {
@@ -164,7 +186,7 @@ function nachLaden() {
 
 };
 
-
+/** Confetti shower is adjusted to the size of the window dimension */
 function windowResized() {
   let canvasSize = Math.min(window.innerHeight, window.innerWidth);
   confetti=[];
@@ -174,6 +196,8 @@ function windowResized() {
   resizeCanvas(canvasSize, canvasSize);
 }
 
+/** Obtaining the coordinate of a mouse click on a canvas element*/
+/** .mouseclicked()function is used to attach element specific event listeners */
 function mouseClicked(event) {
   let x = event.pageX - (co.canvas.offsetLeft + co.canvas.clientLeft);
   let y = event.pageY - (co.canvas.offsetTop + co.canvas.clientTop);
@@ -190,10 +214,11 @@ function mouseClicked(event) {
         puzzlePiece.move()
       }
   });
-
-  clicks++;
+  // Counter of each move 
+  clicks ++;
   select("#clicks").elt.innerHTML = `Moves: ${clicks}`;
 
+  // First click triggers the timer
   if(clicks === 1){
     startTime = new Date();
   }
@@ -214,12 +239,12 @@ function getPuzzlePiece(dx, dy) {
   return null;
 };
 
-
+/** The production of the puzzle pieces */
 function puzzleFactory(){
   let puzzlePiece;
-
+// They are created upon the variables in prototypePuzzle 
   for (let x = 0; x < piecesX; x++) {
-    for (let y = 0; y < piecesY; y++) {
+    for (let y = 0; y < piecesY; y++) { 
       puzzlePiece = Object.create(prototypePuzzle, {
         dx: { // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
           value:x,
@@ -232,9 +257,9 @@ function puzzleFactory(){
           configurable: true
         }, 
         sx: {value:x}, // x position in source image (0 = most left, piecesX-1 = most right piece)
-        sy: {value:y}  // ...
+        sy: {value:y}  // y position in source image (1 = most left, piecesy-1 = most right piece)
       });
-      puzzlePiece.init();
+      puzzlePiece.init(); // Append the created pieces to the puzzleCollection
     }
   }
 };
@@ -244,12 +269,14 @@ function puzzleFactory(){
  */
 function shufflePuzzle(){
   let pos = []; // create array
-  for (let x = 0; x < piecesX; x++) {
+  for (let x = 0; x < piecesX; x++) { /**Based upon the nr of piecesX and piecesY */
     for (let y = 0; y < piecesY; y++) {
       pos.push([x,y]);
     }
   }
-
+/**
+ * The positions of the pieces are assigned randomly
+ */
   puzzleCollection.forEach(function(puzzlePiece){
     let randomPosition = pos.splice(Math.floor(Math.random()*pos.length), 1);
     puzzlePiece.dx = randomPosition[0][0];
@@ -263,29 +290,48 @@ function shufflePuzzle(){
     }
     
   })
-
+  /**
+   * Timer blends in
+   */
   timerInterval = setInterval(() => {
     counter++;
     select("#timer").html(convertSeconds(counter));
   }, 1000)
 };
 
-function playAudio(){ 
+/** Background Music */
 
-  let sound = new Audio();
-  sound.src = "sound\mp3\winner.mp3";
-  sound.volume = 0.1;
-  sound.play();
+
+function alwaysOnMusic (){
+  let backGroundMusic = new Audio();
+  backGroundMusic.src = "libraries/Oh-by-jingo.mp3";
+  backGroundMusic.volume = 0.1;
+  backGroundMusic.play(); 
+  
 
 };
+ 
 
+function winMusicOn(){ 
+
+  music = new Audio();
+  music.src = "libraries/winner/mp3";
+  music.volume = 0.1;
+  music.play();
+  
+};
+
+/**
+ * The game ends when all the positions of the mixed and moved pieces(dx,dy) are identical to their source(sx,sy) pieces
+ */
 function endOfTheGame(){
   if (puzzleCollection.every((puzzlePiece) => puzzlePiece.dx === puzzlePiece.sx && puzzlePiece.dy === puzzlePiece.sy)) {
     gameWon = true;
     
-    let a = select("#start").elt.style.display = "block"; // start button will be appeared 
+    let a = select("#start").elt.style.display = "block"; // start button will appear 
     
     clearInterval(timerInterval);
-    playAudio();
+    winMusicOn();
   }
 };
+
