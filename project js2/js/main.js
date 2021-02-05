@@ -182,7 +182,7 @@ function draw() {
     frameRate(30);
     for (let i = 0; i < confetti.length; i++) {
       confetti[i].show();
-      confetti[i].updateConfetti();
+      confetti[i].update();
     }
   } else {
     frameRate(15);
