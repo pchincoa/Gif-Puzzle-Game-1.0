@@ -1,37 +1,29 @@
-/**
- * GIF pictures source 
- */
-
+// GIF pictures source 
 let url = [
   "https://media.giphy.com/media/3ohhwDfcBvBPpD9RZu/source.gif", // Vermeer
-  "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif", // Frida Kahlo
+  "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif",      // Frida Kahlo
   "https://media.giphy.com/media/xTiTnyVHRS87mtGPQs/source.gif", // Magritte
-  "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif", // Picasso
-  "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif" // Leonardo
+  "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif",  // Picasso
+  "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif"       // Leonardo
 ];
 
-let img;
-let confetti = [];
-let sound;
-let puzz;
-let counter = 0;
-let button1, button2;
-const mischenZeit = 10;
-
-let timerInterval;
-let timerHtml;
-let co;
-let clicks = -1;
-let startTime = null;
-let puzzleCollection = []; 
+// global variable definition
+let img;                    // store image to use for puzzle
+let confetti = [];          // for won game
+let counter = 0;            // seconds since game started
+let timerInterval;          // store interval counting game time
+let canvas;
+let clicks = 0;             // count movements for statistics
+let puzzleCollection = [];  // array storing all puzzle pieces
 let minDimension = 0;       // smaller of both dimensions of the source image
-let border = 2;
+let border = 2;             // border of each puzzle piece
 let piecesX = 3;            // number of puzzle pieces in a row, should be >=3
 let piecesY = 3;            // number of puzzle pieces in a column, should be >=3
-let gameWon = false;
+let gameWon = false;        // if set true, start confetti
+let music;                  // store audio file for background and winning music
 
 /**
- * The features of the prototype puzzle pieces 
+ * prototype of a puzzle piece
  */
 let prototypePuzzle = {
   dx : 0,                   // x position in final puzzle (canvas/destination) (0 = most left, piecesX-1 = most right piece)
@@ -39,9 +31,6 @@ let prototypePuzzle = {
   sx : 0,                   // x position in source image (0 = most left, piecesX-1 = most right piece)
   sy : 0,                   // y position in source image (0 = top, piecesY-1 = bottom piece)
   whitePiece: false,        // The empty piece
-  spX: 0.1,
-  spY: 0.1,
-  music: null,
   init: function(){ puzzleCollection.push(this); },
   checkNeighborsForWhitePiece: function(){  // Positioning the four neighbors of the empty piece 
     if(this.dx > 0 && getPuzzlePiece(this.dx-1, this.dy).whitePiece) {
@@ -78,10 +67,29 @@ let prototypePuzzle = {
       tmp = whitePiece.dy;
       whitePiece.dy = this.dy;
       this.dy = tmp;
+
+      // statistics (timer, moves) blends in
+      if (clicks == 0) {
+        select("#statistics").elt.className = "";
+      }
+
+      // Counter of each move
+      clicks++;
+      select("#clicks").elt.innerHTML = `Moves: ${clicks}`;
+
+      // timer starts
+      if (timerInterval == undefined) {
+        timerInterval = setInterval(() => {
+          counter++;
+          select("#timer").html(convertSeconds(counter));
+        }, 1000)
+      }
+
+      // check winning condition
+      endOfTheGame();
     }
   }
 };
-
 
 /**
  * Initialize image array and preload image
@@ -91,7 +99,6 @@ function preload() {
   // img = loadImage('img/free-images-national-gallery-of-art-2.jpg');
   // img = loadImage('https://media.giphy.com/media/xUA7bcoWYjQMZhvEAM/giphy.gif');
 };
-
 
 // Sekunden in "zweistellig" konvertieren
 /**
@@ -104,14 +111,15 @@ function convertSeconds(seconds) {
   return `${nf(min, 2)}:${nf(sec, 2)}`;
 };
 
-
 /**
  * p5 library setup
  */
 function setup() {
-  let canvasSize = Math.min(window.innerHeight/1.2, window.innerWidth/1.2);
-  co = createCanvas(canvasSize, canvasSize);
-  
+  // initialize canvas
+  let canvasSize = calculateCanvasSize();
+  canvas = createCanvas(canvasSize, canvasSize);
+  canvas.parent('canvas-holder');
+
   // shuffle button
   select("#btn").mouseClicked(shufflePuzzle);
 
@@ -120,55 +128,54 @@ function setup() {
 
   // Background Music
   select("#backGroundMusic").mouseClicked(alwaysOnMusic);
-
-  button1 = createButton('Reload the Puzzle');
-  button1.mousePressed(nachLaden);
+  music = new Audio();
+  music.src = "sound/Oh-by-jingo.mp3";
+  music.volume = 0.1;
   
-  select("#start").mousePressed(nachLaden);
+  // New game button
+  select("#newGame").mouseClicked(newGame);
 
   // create puzzle pieces
   puzzleFactory();
 
   // Settings of timer
-  timerHtml = select('#timer');
-  timerHtml.html(convertSeconds(counter));
+  select('#timer').html(convertSeconds(counter));
 
   // Confetti Piece Instance
   // nach dem Lösung des Puzzle Confetti zeigen
   for (let i = 0; i < canvasSize / 2; i++) {
      confetti[i] = new Confetti();
-  } // Ende Schleife
-}; //ENDE setup
+  }
+};
 
-
-// Puzzlebildern werden in Canvas geladen
-// Bg Farbe, Stellung der Bilder und Frame Funktionen,
+/**
+ * draws single puzzle pieces to canvas, taking parts of loaded image 
+ */
 function draw() {
-  img.setFrame(frameCount % img.numFrames()); /**frame count per second of the GIF image*/
+  img.setFrame(frameCount % img.numFrames());           // frame count per second of the GIF image
 
-  minDimension = Math.min(img.width, img.height); // Ensuring the result of a square image
+  minDimension = Math.min(img.width, img.height);       // Ensuring the result of a square image
   noStroke();
   fill(255); 
   puzzleCollection.forEach(puzzlePiece => {
     if(puzzlePiece.whitePiece) {
 
-      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY); /** Paint the empty piece in white(255) */ 
+      rect(puzzlePiece.dx*canvas.width/piecesX, puzzlePiece.dy*canvas.height/piecesY, canvas.width/piecesX, canvas.height/piecesY); /** Paint the empty piece in white(255) */ 
     } else {
-      rect(puzzlePiece.dx*co.width/piecesX, puzzlePiece.dy*co.height/piecesY, co.width/piecesX, co.height/piecesY);
+      rect(puzzlePiece.dx*canvas.width/piecesX, puzzlePiece.dy*canvas.height/piecesY, canvas.width/piecesX, canvas.height/piecesY);
       image(img, 
-        puzzlePiece.dx*co.width/piecesX + border,   // dx (x in destination =canvas)
-        puzzlePiece.dy*co.height/piecesY + border,  // dy (y in destination =canvas)
-        co.width/piecesX - 2*border,                // destination (=canvas) width
-        co.height/piecesY - 2*border,
-        puzzlePiece.sx*minDimension/piecesX,        // sx (x in source image)
-        puzzlePiece.sy*minDimension/piecesY,        // sy (y in source image)
-        minDimension/piecesX,
-        minDimension/piecesY);  
+        puzzlePiece.dx*canvas.width/piecesX + border,   // dx (x in destination =canvas) of puzzle piece
+        puzzlePiece.dy*canvas.height/piecesY + border,  // dy (y in destination =canvas) of puzzle piece
+        canvas.width/piecesX - 2*border,                // destination (=canvas) width of puzzle piece
+        canvas.height/piecesY - 2*border,               // destination (=canvas) height of puzzle piece
+        puzzlePiece.sx*minDimension/piecesX,            // sx (x in source image) of puzzle piece
+        puzzlePiece.sy*minDimension/piecesY,            // sy (y in source image) of puzzle piece
+        minDimension/piecesX,                           // source img width of puzzle piece
+        minDimension/piecesY);                          // source img height of puzzle piece
     }
   });
-  /**
-   * Upon winning, the rate will be increased along with the confetti shower 
-   */
+
+  // Upon winning, the rate will be increased along with the confetti shower 
   if(gameWon) {
     frameRate(30);
     for (let i = 0; i < confetti.length; i++) {
@@ -178,50 +185,68 @@ function draw() {
   } else {
     frameRate(15);
   }
-}; //ENDE draw
-
-// Die Seite nachladen
-function nachLaden() {
-  button1 = window.location.reload();
-
 };
 
-/** Confetti shower is adjusted to the size of the window dimension */
+/** 
+ * Adjust canvas size on browser window resize.
+ * Confetti shower is adjusted to the size of the window dimension
+ */
 function windowResized() {
-  let canvasSize = Math.min(window.innerHeight, window.innerWidth);
-  confetti=[];
-  for (let i = 0; i < canvasSize / 2; i++) {
-     confetti[i] = new Confetti();
+  if(gameWon) {
+    confetti=[];
+    for (let i = 0; i < canvasSize / 2; i++) {
+      confetti[i] = new Confetti();
+    }
   }
+  let canvasSize = calculateCanvasSize();
   resizeCanvas(canvasSize, canvasSize);
-}
+};
 
-/** Obtaining the coordinate of a mouse click on a canvas element*/
-/** .mouseclicked()function is used to attach element specific event listeners */
+/**
+ * resize canvas to show heading, buttons and photo without scrolling
+ * ensure minimum size of canvas
+ */
+function calculateCanvasSize() {
+  // 
+  let canvasSize = Math.min(window.innerHeight/1.2 - select("#container-menu").elt.getBoundingClientRect().height - select("#header").elt.getBoundingClientRect().height, window.innerWidth/1.2);
+  canvasSize = Math.max(canvasSize, 400);
+  return canvasSize;  
+};
+
+ /**
+  * Obtaining the coordinate of a mouse click, used to determine the click position on the canvas element
+  * .mouseclicked() is provided by p5 framework and wraps JavaScript event listener
+  * @param {Event} event provides information about the mouse click event
+  */
 function mouseClicked(event) {
-  let x = event.pageX - (co.canvas.offsetLeft + co.canvas.clientLeft);
-  let y = event.pageY - (co.canvas.offsetTop + co.canvas.clientTop);
+  if(!gameWon) {  // as long as game is ongoing and not won
+    // determine, if a puzzle piece was clicked and if so call the puzzle pieces move function
+    // (in the move function, a neighbor check determines, if the puzzle piece can be moved
+    // to the empty place or not)
+    let canvasBoundingClientRect = canvas.elt.getBoundingClientRect();  // get canvas position and dimension after CSS transformations in page
+    let x = event.pageX - canvasBoundingClientRect.left;                // calculate mouse click x coordinate, were as 0 is most left pixel in canvas
+    let y = event.pageY - canvasBoundingClientRect.top;                 // calculate mouse click y coordinate, were as 0 is most up pixel in canvas
 
-  // Collision detection between clicked offset and element
-  puzzleCollection.forEach(function(puzzlePiece) {
-    let puzzlePieceLeft = puzzlePiece.dx*co.width/piecesX + border;
-    let puzzlePieceWidth = co.width/piecesX - 2*border;
-    let puzzlePieceTop = puzzlePiece.dy*co.height/piecesY + border;
-    let puzzlePieceHeight = co.height/piecesY - 2*border;
-    if(x > puzzlePieceLeft && x < puzzlePieceLeft + puzzlePieceWidth &&
-        y > puzzlePieceTop  && y < puzzlePieceTop  + puzzlePieceHeight) {
-        //console.log('clicked an element: ' + puzzlePiece.dx + ' ' +puzzlePiece.dy);
-        puzzlePiece.move()
-      }
-  });
-  // Counter of each move 
-  clicks ++;
-  select("#clicks").elt.innerHTML = `Moves: ${clicks}`;
-
-  // First click triggers the timer
-  if(clicks === 1){
-    startTime = new Date();
+    // Collision detection between clicked offset (calculated above) and puzzle piece
+    puzzleCollection.forEach(function(puzzlePiece) {
+      let puzzlePieceLeft = puzzlePiece.dx*canvas.width/piecesX + border;
+      let puzzlePieceWidth = canvas.width/piecesX - 2*border;
+      let puzzlePieceTop = puzzlePiece.dy*canvas.height/piecesY + border;
+      let puzzlePieceHeight = canvas.height/piecesY - 2*border;
+      if(x > puzzlePieceLeft && x < puzzlePieceLeft + puzzlePieceWidth &&
+          y > puzzlePieceTop  && y < puzzlePieceTop  + puzzlePieceHeight) {
+          //console.log('clicked an element: ' + puzzlePiece.dx + ' ' +puzzlePiece.dy);
+          puzzlePiece.move()
+        }
+    });
   }
+};
+
+/**
+ * Reload page to start new game
+ */
+function newGame() {
+  window.location.reload();
 };
 
 /**
@@ -242,7 +267,7 @@ function getPuzzlePiece(dx, dy) {
 /** The production of the puzzle pieces */
 function puzzleFactory(){
   let puzzlePiece;
-// They are created upon the variables in prototypePuzzle 
+  // They are created upon the variables in prototypePuzzle 
   for (let x = 0; x < piecesX; x++) {
     for (let y = 0; y < piecesY; y++) { 
       puzzlePiece = Object.create(prototypePuzzle, {
@@ -251,7 +276,7 @@ function puzzleFactory(){
           writable: true,
           configurable: true
         },
-        dy: {// y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
+        dy: { // y position in final puzzle (canvas/destination) (0 = most up, piecesY-1 = bottom piece)
           value:y,
           writable: true,
           configurable: true
@@ -268,57 +293,39 @@ function puzzleFactory(){
  * Shuffles the puzzle pieces randomly
  */
 function shufflePuzzle(){
-  let pos = []; // create array
-  for (let x = 0; x < piecesX; x++) { /**Based upon the nr of piecesX and piecesY */
+  let pos = [];                           // create array
+  for (let x = 0; x < piecesX; x++) {     // Based upon the nr of piecesX and piecesY
     for (let y = 0; y < piecesY; y++) {
       pos.push([x,y]);
     }
   }
-/**
- * The positions of the pieces are assigned randomly
- */
+
+  // The positions of the pieces are assigned randomly
   puzzleCollection.forEach(function(puzzlePiece){
     let randomPosition = pos.splice(Math.floor(Math.random()*pos.length), 1);
     puzzlePiece.dx = randomPosition[0][0];
     puzzlePiece.dy = randomPosition[0][1];
 
     if (randomPosition[0].every((value, index) => value === [0,1][index])){
-    // if (randomPosition[0][0] + randomPosition[0][1] == 0){
       puzzlePiece.whitePiece = true;
     } else {
       puzzlePiece.whitePiece = false;
     }
-    
   })
-  /**
-   * Timer blends in
-   */
-  timerInterval = setInterval(() => {
-    counter++;
-    select("#timer").html(convertSeconds(counter));
-  }, 1000)
 };
 
-/** Background Music */
-
-
+/** 
+ * Background Music, toggle on and off
+ */
 function alwaysOnMusic (){
-  let backGroundMusic = new Audio();
-  backGroundMusic.src = "libraries/Oh-by-jingo.mp3";
-  backGroundMusic.volume = 0.1;
-  backGroundMusic.play(); 
-  
-
-};
- 
-
-function winMusicOn(){ 
-
-  music = new Audio();
-  music.src = "libraries/winner/mp3";
-  music.volume = 0.1;
-  music.play();
-  
+  if (select("#backGroundMusic").elt.innerHTML == "Music Off")
+  {
+    select("#backGroundMusic").elt.innerHTML = "Music On";
+    music.pause();
+  } else {
+    select("#backGroundMusic").elt.innerHTML = "Music Off";
+    music.play();
+  }
 };
 
 /**
@@ -326,12 +333,14 @@ function winMusicOn(){
  */
 function endOfTheGame(){
   if (puzzleCollection.every((puzzlePiece) => puzzlePiece.dx === puzzlePiece.sx && puzzlePiece.dy === puzzlePiece.sy)) {
-    gameWon = true;
-    
-    let a = select("#start").elt.style.display = "block"; // start button will appear 
-    
-    clearInterval(timerInterval);
-    winMusicOn();
+    gameWon = true;                        // enable other features (confetti)
+    select("#newGame").elt.className = ""; // new game button will appear 
+    clearInterval(timerInterval);          // stop timer, counting time it takes to solve puzzle
+
+    // hide background music button and play winning music
+    select("#backGroundMusic").elt.className = "hidden";
+    music.src = "sound/winner.mp3";
+    music.volume = 0.8;
+    music.play();
   }
 };
-
