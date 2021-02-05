@@ -1,10 +1,12 @@
 // GIF pictures source 
 let url = [
   "https://media.giphy.com/media/3ohhwDfcBvBPpD9RZu/source.gif", // Vermeer
-  "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif",      // Frida Kahlo
-  "https://media.giphy.com/media/xTiTnyVHRS87mtGPQs/source.gif", // Magritte
-  "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif",  // Picasso
-  "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif"       // Leonardo
+   "https://media.giphy.com/media/xT0xesOvAnyiyPMjbq/source.gif", // Egon Schiele
+   "https://media.giphy.com/media/gVJKzDaWKSETu/source.gif", // Frida Kahlo
+   "https://media.giphy.com/media/xTiTnyVHRS87mtGPQs/source.gif", //  René Magritte
+   "https://media.giphy.com/media/l4tV5VQbNScIikY4o/source.gif", //  Pablo Picasso
+   "https://media.giphy.com/media/pJewxDQLE8iZi/source.gif", // Leonardo da Vinci
+   "https://media.giphy.com/media/495Ifoc3oyEtwikNLx/source.gif" // Albrecht Dürer 
 ];
 
 // global variable definition
@@ -156,7 +158,7 @@ function draw() {
 
   minDimension = Math.min(img.width, img.height);       // Ensuring the result of a square image
   noStroke();
-  fill(255); 
+  fill("#c5ccc1"); 
   puzzleCollection.forEach(puzzlePiece => {
     if(puzzlePiece.whitePiece) {
 
