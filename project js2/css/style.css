@@ -54,7 +54,7 @@ canvas {
   z-index: 100;
 }
 
-button {
+button,a {
   border-radius: 0.5em;
   color: var(--textColor);
   border: none;
@@ -65,7 +65,8 @@ button {
   transition: all .2s ease-in-out;
 }
 
-button:hover {
+button:hover,
+a:hover {
   color: var(--bg-btn);
   background: var(--textColor);
 }
